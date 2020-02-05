@@ -5,22 +5,41 @@ namespace RouteServiceAuth
     using System.Collections.Generic;
     using Microsoft.AspNetCore.Http;
     using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Options;
 
     public interface IWhitelist
     {
         bool IsWhitelisted(HttpRequest request);
     }
 
-    public class Whitelist : IWhitelist
+    public sealed class Whitelist : IWhitelist
     {
         const string BaseAddress = "http://localhost";
 
-        public List<Uri> Entries { get;} = new List<Uri>();
         private readonly ILogger _logger;
+        private readonly IOptionsMonitor<WhitelistOptions> _optionsMonitor;
 
-        public Whitelist(ILoggerFactory loggerFactory)
+        public List<Uri> Entries { get;} = new List<Uri>();
+
+        public Whitelist(ILogger<Whitelist> logger, IOptionsMonitor<WhitelistOptions> optionsMonitor)
         {
-            _logger = loggerFactory?.CreateLogger<Whitelist>();
+            _logger = logger;
+            _optionsMonitor = optionsMonitor;
+            _optionsMonitor.OnChange(options => Bind(options));
+            Bind(_optionsMonitor.CurrentValue);
+        }
+
+        void Bind(WhitelistOptions options)
+        {
+            Entries.Clear();
+
+            foreach(var absolutePath in options.Paths)
+            {
+                var entry = CreateEntry(absolutePath);
+                _logger?.LogTrace($"Adding {absolutePath} as {entry}");
+                Entries.Add(entry);
+            }
+            _logger?.LogTrace($"Bound {Entries.Count} entries to the whitelist");
         }
 
         public Uri CreateEntry(Uri source)
@@ -41,11 +60,11 @@ namespace RouteServiceAuth
             {
                 if(Uri.TryCreate(forwardTo, UriKind.Absolute, out var forwardUri))
                 {
-                    _logger.LogTrace($"Checking whitelist on behalf of {forwardUri}");
+                    _logger?.LogTrace($"Checking whitelist on behalf of {forwardUri}");
                     forwardUri = CreateEntry(forwardUri);
-                    if(Entries.Any(e=>e.IsBaseOf(forwardUri)))
+                    if(Entries.Any(e=>e == forwardUri || (e.AbsolutePath.EndsWith('/') && e.IsBaseOf(forwardUri))))
                     {
-                        _logger.LogTrace($"{forwardUri}:true");
+                        _logger?.LogTrace($"{forwardUri}:true");
                         return true;
                     }
                     _logger.LogTrace($"{forwardUri}:false");
@@ -53,8 +72,8 @@ namespace RouteServiceAuth
                 }
                 else
                 {
-                    _logger.LogWarning("Unexpected content passed as header value; expected a valid Uri; enable tracing to view untrusted header values.");
-                    _logger.LogTrace($"Unexpected content passed as header value; expected a valid Uri; value={forwardTo};");
+                    _logger?.LogWarning("Unexpected content passed as header value; expected a valid Uri; enable tracing to view untrusted header values.");
+                    _logger?.LogTrace($"Unexpected content passed as header value; expected a valid Uri; value={forwardTo};");
 
                     throw new Exception("Could not construct valid Uri from forward address");
                 }

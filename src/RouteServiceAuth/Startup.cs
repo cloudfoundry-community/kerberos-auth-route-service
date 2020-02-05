@@ -43,7 +43,7 @@ namespace RouteServiceAuth
 //                    opt.EventsType = typeof(KerberosAuthenticationEvents);
 //                });
             services.AddSingleton<KerberosAuthenticationEvents>();
-            services.AddWhitelist(_configuration, _loggerFactory);
+            services.AddWhitelist(_configuration);
             services.AddProxy();
         }
 
