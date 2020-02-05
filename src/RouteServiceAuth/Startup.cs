@@ -19,17 +19,15 @@ namespace RouteServiceAuth
     public class Startup
     {
         private readonly ILogger<Startup> _logger;
-        private readonly ILoggerFactory _loggerFactory;
 
         private readonly IConfiguration _configuration;
 
         // This method gets called by the runtime. Use this method to add services to the container.
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
-        public Startup(ILogger<Startup> logger, IConfiguration configuration, ILoggerFactory loggerFactory)
+        public Startup(ILogger<Startup> logger, IConfiguration configuration)
         {
             _logger = logger;
             _configuration = configuration;
-            _loggerFactory = loggerFactory;
         }
 
         public void ConfigureServices(IServiceCollection services)
