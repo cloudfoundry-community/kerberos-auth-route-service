@@ -19,7 +19,7 @@ namespace RouteServiceAuth
         private readonly ILogger _logger;
         private readonly IOptionsMonitor<WhitelistOptions> _optionsMonitor;
 
-        public List<Uri> Entries { get;} = new List<Uri>();
+        public List<Uri> Entries { get; private set; } = new List<Uri>();
 
         public Whitelist(ILogger<Whitelist> logger, IOptionsMonitor<WhitelistOptions> optionsMonitor)
         {
@@ -31,15 +31,15 @@ namespace RouteServiceAuth
 
         void Bind(WhitelistOptions options)
         {
-            Entries.Clear();
-
+            var entries = new List<Uri>();
             foreach(var absolutePath in options.Paths)
             {
                 var entry = CreateEntry(absolutePath);
                 _logger?.LogTrace($"Adding {absolutePath} as {entry}");
-                Entries.Add(entry);
+                entries.Add(entry);
             }
-            _logger?.LogTrace($"Bound {Entries.Count} entries to the whitelist");
+            Entries = entries;
+            _logger?.LogTrace($"Bound {entries.Count} entries to the whitelist");
         }
 
         public Uri CreateEntry(Uri source)
